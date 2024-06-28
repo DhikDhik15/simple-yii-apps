@@ -3,12 +3,15 @@
 namespace app\controllers;
 
 use Yii;
+use app\models\Buzz;
 use yii\web\Response;
 use app\models\Orders;
+use app\models\Subset;
 use yii\web\Controller;
 use app\models\Customers;
 use app\models\Downwards;
 use app\models\LoginForm;
+use app\models\Partition;
 use app\models\JumpRabbit;
 use app\models\ContactForm;
 use yii\filters\VerbFilter;
@@ -237,5 +240,135 @@ class SiteController extends Controller
         ]);
     }
 
+    public function actionTestBuzz()
+    {
+        $model = new Buzz();
+
+        $result=[];
+
+        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
+            $input = $model->input;
+
+            $result=[];
+
+            for ($i = 1; $i <= $input; $i++) {
+                if ($i % 3 == 0 && $i % 5 == 0 && $i % 7 == 0) {
+                    $result[] = "FizzBuzz";
+                } elseif ($i % 3 == 0 && $i % 5 == 0) {
+                    $result[] = "Fizz1";
+                } elseif ($i % 3 == 0 && $i % 7 == 0) {
+                    $result[] = "Fizz2";
+                } elseif ($i % 5 == 0 && $i % 7 == 0) {
+                    $result[] = "Fizz3";
+                } elseif ($i % 3 == 0) {
+                    $result[] = "Buzz1";
+                } elseif ($i % 5 == 0) {
+                    $result[] = "Buzz2";
+                } elseif ($i % 7 == 0) {
+                    $result[] = "Buzz3";
+                } else {
+                    $result[] = (string)$i;
+                }
+            }
+        }
+
+        return $this->render('buzz', [
+            'model' => $model,
+            'result' => $result
+        ]);
+    }
+
+    public function actionTestSubset()
+    {
+        $model = new Subset();
+
+        $maxSubsetSize = null;
+        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
+            $strs = explode(',', $model->strs);
+            $m = $model->m;
+            $n = $model->n;
+
+            $maxSubsetSize = $this->findMaxForm($strs, $m, $n);
+
+        }
+        return $this->render('subset', [
+            'model' => $model,
+            'maxSubsetSize' => $maxSubsetSize
+        ]);
+
+    }
+
+    private function findMaxForm($strs, $m, $n)
+    {
+        $dp = array_fill(0, $m + 1, array_fill(0, $n + 1, 0));
+
+        foreach ($strs as $str) {
+            $zeros = substr_count($str, '0');
+            $ones = substr_count($str, '1');
+            
+            for ($i = $m; $i >= $zeros; $i--) {
+                for ($j = $n; $j >= $ones; $j--) {
+                    $dp[$i][$j] = max($dp[$i][$j], $dp[$i - $zeros][$j - $ones] + 1);
+                }
+            }
+        }
+
+        return $dp[$m][$n];
+    }
+
+    public function actionTestPartition()
+    {
+        $model = new Partition();
+        $result = null;
+
+        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
+            $nums = array_map('intval', explode(',', $model->nums));
+            $k = $model->k;
+
+            $result = $this->splitArray($nums, $k);
+        }
+
+        return $this->render('partition', [
+            'model' => $model,
+            'result' => $result
+        ]);
+    }
+
+    private function splitArray($nums, $k)
+    {
+        $left = max($nums);
+        $right = array_sum($nums);
+
+        while ($left < $right) {
+            $mid = intval(($left + $right) / 2);
+            if ($this->canSplit($nums, $k, $mid)) {
+                $right = $mid;
+            } else {
+                $left = $mid + 1;
+            }
+        }
+
+        return $left;
+    }
+
+    private function canSplit($nums, $k, $maxSum)
+    {
+        $currentSum = 0;
+        $requiredSubarrays = 1;
+
+        foreach ($nums as $num) {
+            if ($currentSum + $num > $maxSum) {
+                $requiredSubarrays++;
+                $currentSum = $num;
+                if ($requiredSubarrays > $k) {
+                    return false;
+                }
+            } else {
+                $currentSum += $num;
+            }
+        }
+
+        return true;
+    }
     // ------------------------------
 }
